@@ -53,10 +53,10 @@ builds:
 archives:
   - id: sshw
     name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
-    format: tar.gz
+    compression: tar.gz
     format_overrides:
       - goos: windows
-        format: zip
+        compression: zip
     files:
       - LICENSE
       - README.md
