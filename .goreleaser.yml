@@ -1,14 +1,14 @@
 version: 2
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 
-
 project_name: sshw
 
-metadata:
-  homepage: https://github.com/zdev0x/sshw
-  license: MIT
-  maintainers:
-    - "zdev0x <hi@zdev0x.com>"
+# 移除整个 metadata 区块，因为其字段在 v2 中不再有效
+# metadata:
+#   homepage: https://github.com/sshw/sshw
+#   license: MIT
+#   maintainers:
+#     - "yinheli <me@yinheli.com>"
 
 builds:
   - binary: sshw
