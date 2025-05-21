@@ -1,13 +1,14 @@
+version: 2
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 
 
 project_name: sshw
 
 metadata:
-  homepage: https://github.com/sshw/sshw
+  homepage: https://github.com/zdev0x/sshw
   license: MIT
   maintainers:
-    - "yinheli <me@yinheli.com>"
+    - "zdev0x <hi@zdev0x.com>"
 
 builds:
   - binary: sshw
