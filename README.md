@@ -11,7 +11,8 @@ SSHW 是一个强大的 SSH 客户端包装器，它提供了更便捷的 SSH �
 - 支持多级服务器配置
 - 支持服务器分组和别名
 - 支持密码和密钥认证
-- 支持配置文件加密
+- 支持配置文件加密（使用 AES-256-GCM）
+- 支持主密码保护（使用系统 keyring 或本地文件）
 - 支持配置文件格式：YAML 和 JSON
 - 支持 SSH 跳板机
 - 支持自定义连接参数
@@ -52,6 +53,54 @@ sshw
 ```
 
 3. 使用方向键选择服务器，回车连接
+
+## 安全特性
+
+### 主密码管理
+
+SSHW 使用主密码来保护配置文件中的敏感信息。主密码的哈希值会优先存储在系统的密钥环中（如 Linux 的 `gnome-keyring`、macOS 的 Keychain、Windows 的 Credential Manager），如果系统密钥环不可用，则会存储在本地文件 `.sshw-master` 中。
+
+#### 设置主密码
+
+首次使用加密功能时，系统会提示你设置主密码。你也可以随时使用以下命令设置或更改主密码：
+
+```bash
+# 设置主密码
+sshw -set-master-password
+
+# 更改主密码
+sshw -change-master-password
+
+# 移除主密码
+sshw -remove-master-password
+```
+
+> **注意**：
+> - 主密码是保护你所有敏感信息的关键，请选择一个强密码并妥善保管。
+> - 如果使用本地文件存储（`.sshw-master`），请确保该文件的安全。
+> - 移除主密码后，配置文件仍然保持加密状态，需要重新设置主密码或解密才能访问。
+
+### 配置文件加密
+
+SSHW 支持对配置文件中的敏感信息（如密码和密钥密码）进行加密存储。加密使用 AES-256-GCM 算法，密钥通过 PBKDF2 从主密码派生。
+
+#### 加密操作
+
+```bash
+# 加密配置文件（仅加密未加密的条目）
+sshw -encrypt
+
+# 解密配置文件
+sshw -decrypt
+
+# 检查配置文件加密状态
+sshw -check
+```
+
+> **注意**：
+> - 加密操作只会加密未加密的条目，如果所有条目都已加密，会提示用户。
+> - 建议定期更改主密码以提高安全性。
+> - 如果使用本地文件存储主密码，请确保 `.sshw-master` 文件的安全。
 
 ## 配置管理
 
@@ -111,41 +160,37 @@ SSHW 会按以下顺序查找配置文件：
 | 配置项 | 说明 | 必填 | 默认值 |
 |--------|------|------|--------|
 | name | 服务器名称 | 是 | - |
+| alias | 服务器别名 | 否 | - |
 | host | 服务器地址 | 是 | - |
 | user | 用户名 | 否 | 当前系统用户 |
 | port | 端口号 | 否 | 22 |
 | password | 密码 | 否 | - |
 | keypath | 密钥文件路径 | 否 | - |
 | passphrase | 密钥密码 | 否 | - |
-| is_encrypted | 是否已加密 | 否  | - |
+| is_encrypted | 是否已加密（内部字段） | 否 | false |
 | children | 子服务器列表 | 否 | - |
 | jump | 跳板机配置 | 否 | - |
 | mask_host | 是否掩码主机名 | 否 | false |
-| show_host | 是否显示主机名 | 否 | false |
+| show_host | 是否显示主机名 | 否 | true |
 | enable_login_marker | 是否启用登录标记 | 否 | false |
 | callback-shells | 回调命令列表 | 否 | - |
 
 ## 高级功能
 
-### 配置文件加密
+### 显示与掩码设置
 
-1. 加密配置文件：
+SSHW 支持对主机信息进行掩码显示，以增加安全性。可以通过以下配置项控制：
 
-```bash
-sshw -encrypt
+```yaml
+- name: "服务器"
+  host: "example.com"
+  show_host: true    # 是否显示主机信息
+  mask_host: true    # 是否掩码主机名
 ```
 
-2. 解密配置文件：
-
-```bash
-sshw -decrypt
-```
-
-3. 检查配置文件加密状态：
-
-```bash
-sshw -check
-```
+掩码规则：
+- IP 地址（如 `206.237.7.72`）会被掩码为 `206.237.*.72`
+- 域名（如 `example.com`）会被掩码为 `e*e.com`
 
 ### 指定配置文件
 
@@ -183,6 +228,31 @@ sshw -config /path/to/config.json
       delay: 2s
 ```
 
+## 命令行选项
+
+SSHW 提供以下命令行选项：
+
+| 选项 | 说明 | 示例 |
+|------|------|------|
+| `-config` | 指定配置文件路径 | `sshw -config ~/my-config.yml` |
+| `-set-master-password` | 设置主密码 | `sshw -set-master-password` |
+| `-change-master-password` | 更改主密码 | `sshw -change-master-password` |
+| `-remove-master-password` | 移除主密码 | `sshw -remove-master-password` |
+| `-encrypt` | 加密配置文件中的敏感信息 | `sshw -encrypt` |
+| `-decrypt` | 解密配置文件中的敏感信息 | `sshw -decrypt` |
+| `-check` | 检查配置文件加密状态 | `sshw -check` |
+| `-version` | 显示版本信息 | `sshw -version` |
+| `-help` | 显示帮助信息 | `sshw -help` |
+| `-s` | 显示系统 SSH 配置文件（~/.ssh/config）中的服务器列表 | `sshw -s` |
+| `-S` | 显示配置文件中定义的服务器列表 | `sshw -S` |
+
+> **注意**：
+> - `-version` 和 `-help` 是标准命令行选项，用于显示版本信息和帮助信息
+> - `-s` 和 `-S` 的区别：
+>   - `-s` 显示系统 SSH 配置文件（~/.ssh/config）中的服务器列表
+>   - `-S` 显示 SSHW 配置文件（~/.sshw.yml 等）中定义的服务器列表
+> - 使用 `-help` 可以查看所有可用的命令行选项
+
 ## 常见问题
 
 1. 配置文件格式错误
@@ -199,6 +269,11 @@ sshw -config /path/to/config.json
    - 确保配置文件权限正确（建议 600）
    - 检查密钥文件权限（建议 600）
 
+4. 加密相关
+   - 如果无法访问系统密钥环，主密码将存储在 `.sshw-master` 文件中
+   - 确保 `.sshw-master` 文件的安全（建议权限 600）
+   - 如果忘记主密码，需要重新设置主密码或解密配置文件
+
 ## 注意事项
 
 1. 配置文件权限
@@ -208,13 +283,14 @@ sshw -config /path/to/config.json
 2. 密码安全
    - 建议使用密钥认证
    - 如果使用密码，建议加密配置文件
+   - 定期更改主密码
 
 3. 跳板机配置
    - 确保跳板机配置正确
    - 注意跳板机的连接顺序
 
 ## 致谢
-
+- [sshw](https://github.com/yinheli/sshw)
 - [go-prompt](https://github.com/c-bata/go-prompt)
 - [ssh_config](https://github.com/kevinburke/ssh_config)
 - [homedir](https://github.com/atrox/homedir)
