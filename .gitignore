@@ -17,4 +17,3 @@
 .idea
 
 !.goreleaser.yml
-sshw
